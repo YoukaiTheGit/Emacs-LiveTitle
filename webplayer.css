@@ -1,0 +1,24 @@
+body {
+    background: black;
+    color: white;
+    margin: 0px;
+    overflow: hidden;
+}
+
+.line {
+    text-align: center;
+}
+
+.hidden {
+    display: none;
+}
+
+.lines {
+    position: relative;
+    border: solid black 2px;
+}
+
+.lines:hover {
+    border: solid red 2px;
+}
+

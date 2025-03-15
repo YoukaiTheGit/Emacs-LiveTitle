@@ -256,24 +256,65 @@ L2 L4
   
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; Experimental system to actually display subtitles. 
-;;; 
-(defun display-subtitles ()
-  (progn
-    (let* ((f (make-frame '((fullscreen . fullboth)
-                      (vertical-scroll-bars . nil)
-                      (horizontal-scroll-bars . nil)
-                      (left-fringe . 0)
-                      (right-fringe . 0)
-                      (menu-bar-lines . 0)
-                      (tool-bar-lines . 0)
-                      (minibuffer . nil)
-                      (undecorated . t)
-                      (cursor-type . nil))))
-	   (w (frame-selected-window f)))
-      (set-window-buffer w (get-buffer-create "*subtitle-display*"))
-      (select-window w)
-      (setq mode-line-format nil)
-      (recenter 0)
-      (insert "This is a test")
-      f)))
+;;; Web title player
+;;;
+
+(require 'websocket)
+
+(defvar sub-webplayer-server nil)
+(defvar sub-webplayer-client nil)
+
+(defun sub-webplayer-start ()
+  "Starts the websocket server for the web player to connect to"
+  (interactive)
+  (if (not sub-webplayer-server)
+      (setq sub-webplayer-server
+            (websocket-server
+             6839
+             :host 'local
+             :on-open #'sub-webplayer-onopen
+             :on-close #'sub-webplayer-onclose
+             ))))
+
+(defun sub-webplayer-stop ()
+  "Stops the webplayer's websocket server"
+  (interactive)
+  (when sub-webplayer-server
+    (websocket-server-close sub-webplayer-server)
+    (setq sub-webplayer-server nil)
+    (setq sub-webplayer-client nil)))
+
+(defun sub-webplayer-onopen (socket)
+  (setq sub-webplayer-client socket))
+
+(defun sub-webplayer-onclose (socket)
+  (setq sub-webplayer-client nil))
+  
+(defun sub-webplayer-display-current-slide ()
+  "Displays the slide currently at point, in the connected web player"
+  (interactive)
+  (let ((slide (slide-as-list)))
+    (sub-webplayer-replace-slide slide)))
+
+(defun sub-webplayer-hide ()
+  "Turns off the webplayer's slide display"
+  (interactive)
+  (if sub-webplayer-client
+      (websocket-send-text sub-webplayer-client (json-encode `((command . hide))))))
+
+(defun sub-webplayer-show ()
+  "Turns on the webplayer's slide display"
+  (interactive)
+  (if sub-webplayer-client
+      (websocket-send-text sub-webplayer-client (json-encode `((command . show))))))
+
+(defun sub-webplayer-replace-slide (slide)
+  (if sub-webplayer-client
+      (websocket-send-text sub-webplayer-client (sub-webplayer-format-slide slide))))
+
+(defun sub-webplayer-format-slide (slide)
+  (json-encode `((command . newslide)
+                 (comment . ,(slide-comment slide))
+                 (lines . ,(slide-lines slide)))))
+
+   
