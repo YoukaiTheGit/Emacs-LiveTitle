@@ -285,11 +285,12 @@ L2 L4
     (setq sub-webplayer-client nil)))
 
 (defun sub-webplayer-onopen (socket)
-  (setq sub-webplayer-client socket))
+  (setq sub-webplayer-client socket)
+  (sub-webplayer-refresh-slide))
 
 (defun sub-webplayer-onclose (socket)
   (setq sub-webplayer-client nil))
-  
+
 (defun sub-webplayer-display-current-slide ()
   "Displays the slide currently at point, in the connected web player"
   (interactive)
@@ -308,9 +309,16 @@ L2 L4
   (if sub-webplayer-client
       (websocket-send-text sub-webplayer-client (json-encode `((command . show))))))
 
+(defvar sub-webplayer-current-slide nil)
+
 (defun sub-webplayer-replace-slide (slide)
+  (setq sub-webplayer-current-slide slide)
+  (sub-webplayer-refresh-slide))
+
+(defun sub-webplayer-refresh-slide ()
   (if sub-webplayer-client
-      (websocket-send-text sub-webplayer-client (sub-webplayer-format-slide slide))))
+      (websocket-send-text sub-webplayer-client (sub-webplayer-format-slide sub-webplayer-current-slide))))
+
 
 (defun sub-webplayer-format-slide (slide)
   (json-encode `((command . newslide)
