@@ -54,10 +54,11 @@ function retryConnection() {
 connectWebSocket();
 
 
-function newSlide({command, comment, lines})
+function newSlide({command, ...data})
 {
     if (command === "newslide")
     {
+        var {comment, lines} = data;
         for (var i=0; ; i++)
         {
             elt = document.getElementById(`line${i}`)
@@ -74,6 +75,13 @@ function newSlide({command, comment, lines})
     {
         var elt = document.querySelector(".lines");
         elt.classList.remove("hidden");
+    }
+    if (command === "style")
+    {
+        var {style} = data;
+        var stylesheet = document.styleSheets[0];
+        if (stylesheet.cssRules.length > 0) stylesheet.deleteRule(0);
+        stylesheet.insertRule(`.globalStyle { ${style} }`);
     }
 }
 

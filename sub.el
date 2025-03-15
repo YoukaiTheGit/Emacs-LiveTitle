@@ -15,25 +15,27 @@
 (defun goto-slide-at-pos (p)
   (goto-char p))
 
+(defconst sub-slide-separator "--\\|==")
+
 (defun next-slide ()
   "Moves to beginning of next slide.  Returns NIL if no next"
   (interactive)
   (goto-char (point-at-eol))
-  (if (search-forward "--" nil t)
+  (if (search-forward-regexp sub-slide-separator nil t)
       (goto-slide-at-pos (point-at-bol))
     nil))
 
 (defun beginning-of-slide ()
   (interactive)
   (goto-char (point-at-eol))
-  (search-backward "--")
+  (search-backward-regexp sub-slide-separator)
   (goto-char (point-at-bol)))
 
 (defun prev-slide ()
   (interactive)
   (goto-char (point-at-eol))
-  (search-backward "--")
-  (search-backward "--")
+  (search-backward-regexp sub-slide-separator)
+  (search-backward-regexp sub-slide-separator)
   (goto-slide-at-pos (point-at-bol)))
 
 ;; Our internal representation for a slide is a list of strings.
@@ -46,6 +48,13 @@
 
 (defmacro slide-lines (slide)
   `(cdr ,slide))
+
+;; A slide looks like this:
+;; --[comment] or ==[comment]
+;; line1
+;; line2
+;; ...
+;; (until the next slide)
 
 (defun slide-contents-to-list (slide)
   (let* ((raw (split-string slide "\n" nil)) ; first elt is what trails slide separator
@@ -284,6 +293,10 @@ L2 L4
     (setq sub-webplayer-server nil)
     (setq sub-webplayer-client nil)))
 
+(defun sub-webplayer-send (object)
+  (if sub-webplayer-client
+      (websocket-send-text sub-webplayer-client (json-encode object))))
+   
 (defun sub-webplayer-onopen (socket)
   (setq sub-webplayer-client socket)
   (sub-webplayer-refresh-slide))
@@ -300,15 +313,17 @@ L2 L4
 (defun sub-webplayer-hide ()
   "Turns off the webplayer's slide display"
   (interactive)
-  (if sub-webplayer-client
-      (websocket-send-text sub-webplayer-client (json-encode `((command . hide))))))
+  (sub-webplayer-send '((command . hide))))
 
 (defun sub-webplayer-show ()
   "Turns on the webplayer's slide display"
   (interactive)
-  (if sub-webplayer-client
-      (websocket-send-text sub-webplayer-client (json-encode `((command . show))))))
+  (sub-webplayer-send '((command . show))))
 
+(defun sub-webplayer-set-style (style)
+  (sub-webplayer-send `((command . style)
+                        (style . ,style))))
+  
 (defvar sub-webplayer-current-slide nil)
 
 (defun sub-webplayer-replace-slide (slide)
