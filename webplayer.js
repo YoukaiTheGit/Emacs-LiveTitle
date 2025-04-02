@@ -94,6 +94,14 @@ document.addEventListener("DOMContentLoaded", () => {
     let posTop = window.localStorage.getItem('top') || "0px";
     linesBox.style.left = posLeft;
     linesBox.style.top = posTop;
+
+    // Make sure the rectange is on the visible part of the screen, in case of
+    // resizes before reloading.
+    let bounds = linesBox.getBoundingClientRect();
+    console.log(`comparing ${bounds.left} to ${window.innerWidth}`);
+    console.log(`comparing ${bounds.top} to ${window.innerHeight}`);
+    if (bounds.left > window.innerWidth - 10) linesBox.style.left = "0px";
+    if (bounds.top > window.innerHeight - 10) linesBox.style.top = "0px";
     
     // Let the text box be dragged around the screen.
     linesBox.addEventListener("mousedown", (event) => {
