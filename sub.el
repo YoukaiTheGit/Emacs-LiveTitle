@@ -8,8 +8,7 @@
 ;;; but still represent the structure.
 ;;; A subtitle file is a plain text file, with one line of text per subtitle line,
 ;;; each screen of subtitles is separated by a line containing '--'
-
-(require 'cl)
+(require 'cl-lib)
 (require 'whitespace)
 
 (defun goto-slide-at-pos (p)
@@ -187,9 +186,9 @@ L2 L4
 		(t
 		 (list-to-qstit
 		  1
-		  (loop for field upfrom 0 below numfields
-			nconc (loop for linenum upfrom field below (length lines) by numfields
-				    collect (nth linenum lines)))
+		  (cl-loop for field upfrom 0 below numfields
+			   nconc (cl-loop for linenum upfrom field below (length lines) by numfields
+				          collect (nth linenum lines)))
 		  nil
 		  )))))
 
@@ -239,13 +238,10 @@ L2 L4
 
 (defconst subtxt-font-lock-keywords
   '(
-    ("^\\(--\\)\\([[:print:]]*\\)" (1 highlight) (2 font-lock-comment-face))
-    ("^\\([[:print:]]+?\\):" 1 font-lock-variable-name-face)
+    ("^\\(--\\)\\([[:print:]]*\\)$" (1 'custom-comment) (2 'font-lock-comment-face))
+    ("^\\(\\([[:upper:]\s-&,]\\)+\\):" 1 'font-lock-variable-name-face)
     ))
          
-   
-
-   
 (define-minor-mode subtxt-mode
   "Minor mode for editing sub-txt files"
   :init-value nil
@@ -259,7 +255,9 @@ L2 L4
             ([f3] . merge-names)
             ([f4] . undo)
             ([f6] . subtxt-splice-to-prev-line)
+            ("\C-c\C-p" . subtxt-splice-to-prev-line)
             ([f7] . subtxt-split-to-next-line)
+            ("\C-c\C-n" . subtxt-split-to-next-line)
             ([f8] . next-slide)
             ([f9] . prev-slide)
             ([f10] . merge-slides)
@@ -367,3 +365,4 @@ L2 L4
                  (lines . ,(vconcat (slide-lines slide))))))
 
    
+(provide 'subtxt)
