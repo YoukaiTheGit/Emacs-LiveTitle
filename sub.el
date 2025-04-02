@@ -17,13 +17,19 @@
 
 (defconst sub-slide-separator "--\\|==")
 
+(defvar slide-change-hook nil
+  "Hook function(s) to run when the slide changes.")
+
 (defun next-slide ()
   "Moves to beginning of next slide.  Returns NIL if no next"
   (interactive)
+  (moveto-next-slide)
+  (run-hooks 'slide-change-hook))
+
+(defun moveto-next-slide ()
   (goto-char (point-at-eol))
-  (if (search-forward-regexp sub-slide-separator nil t)
-      (goto-slide-at-pos (point-at-bol))
-    nil))
+  (when (search-forward-regexp sub-slide-separator nil t)
+    (goto-slide-at-pos (point-at-bol))))
 
 (defun beginning-of-slide ()
   (interactive)
@@ -33,6 +39,10 @@
 
 (defun prev-slide ()
   (interactive)
+  (moveto-prev-slide)
+  (run-hooks 'slide-change-hook))
+
+(defun moveto-prev-slide ()
   (goto-char (point-at-eol))
   (search-backward-regexp sub-slide-separator)
   (search-backward-regexp sub-slide-separator)
@@ -66,7 +76,7 @@
   (save-excursion
     (beginning-of-slide)
     (let ((bos (point)))
-      (next-slide)
+      (moveto-next-slide)
       (let ((slide (buffer-substring-no-properties bos (point))))
 	(slide-contents-to-list slide)))))
 
@@ -75,7 +85,7 @@
 and leaving point at the beginning of the following slide"
   (beginning-of-slide)
   (let ((bos (point)))
-    (next-slide)
+    (moveto-next-slide)
     (let ((slide (buffer-substring-no-properties bos (point))))
       (kill-region bos (point))
       (slide-contents-to-list slide))))
@@ -122,12 +132,12 @@ L2 L4
 		  (format "%s%s%s" line1 delim line2))
 	      slide1
 	      slide2)))
-  (prev-slide))
+  (moveto-prev-slide))
 
 (defun interleave-slides ()
   "Replaces the the current and previous slides with a single slide containing the lines of both previous & current interleaved.  Leaves point in the slide after the newly-created slide."
   (interactive)
-  (prev-slide)
+  (moveto-prev-slide)
   (let* ((slide1 (kill-slide-as-list))
 	 (slide2 (kill-slide-as-list)))
     (when (/= (length slide1) (length slide2))
@@ -142,7 +152,7 @@ L2 L4
 (defun append-slides ()
   "Replaces the the current and previous slides with a single slide containing the lines of the first slide, followed by lines of the second slide.  Leaves point in the slide after the newly-created slide."
   (interactive)
-  (prev-slide)
+  (moveto-prev-slide)
   (let* ((slide1 (kill-slide-as-list))
 	 (slide2 (kill-slide-as-list)))
     (list-to-slide (cons (concat (slide-comment slide1) " " (slide-comment slide2))
@@ -161,7 +171,7 @@ L2 L4
 	    (set-buffer export-buf)
 	    (insert (list-to-qstit numfields (pad-to-fieldsize (slide-lines lines) numfields fieldsize) (slide-comment lines)) "\n" )
 	    (set-buffer curbuf))
-	  (if (not (next-slide)) (throw 'exit nil)))))))
+	  (if (not (moveto-next-slide)) (throw 'exit nil)))))))
 
 (defun pad-to-fieldsize (lines numfields fieldsize)
   (append
@@ -276,14 +286,15 @@ L2 L4
 (defun sub-webplayer-start ()
   "Starts the websocket server for the web player to connect to"
   (interactive)
-  (if (not sub-webplayer-server)
-      (setq sub-webplayer-server
-            (websocket-server
-             6839
-             :host 'local
-             :on-open #'sub-webplayer-onopen
-             :on-close #'sub-webplayer-onclose
-             ))))
+  (when (not sub-webplayer-server)
+    (setq sub-webplayer-server
+          (websocket-server
+           6839
+           :host 'local
+           :on-open #'sub-webplayer-onopen
+           :on-close #'sub-webplayer-onclose
+           ))
+    (sub-webplayer-resume-slides)))
 
 (defun sub-webplayer-stop ()
   "Stops the webplayer's websocket server"
@@ -291,7 +302,17 @@ L2 L4
   (when sub-webplayer-server
     (websocket-server-close sub-webplayer-server)
     (setq sub-webplayer-server nil)
-    (setq sub-webplayer-client nil)))
+    (setq sub-webplayer-client nil)
+    (sub-webplayer-suspend-slides)))
+
+(defun sub-webplayer-suspend-slides ()
+  (interactive)
+  (remove-hook 'slide-change-hook 'sub-webplayer-display-current-slide))
+
+(defun sub-webplayer-resume-slides ()
+  (interactive)
+  (add-hook 'slide-change-hook 'sub-webplayer-display-current-slide))
+  
 
 (defun sub-webplayer-send (object)
   (if sub-webplayer-client
@@ -338,6 +359,6 @@ L2 L4
 (defun sub-webplayer-format-slide (slide)
   (json-encode `((command . newslide)
                  (comment . ,(slide-comment slide))
-                 (lines . ,(slide-lines slide)))))
+                 (lines . ,(vconcat (slide-lines slide))))))
 
    
