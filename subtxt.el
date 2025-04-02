@@ -267,7 +267,7 @@ L2 L4
   (set (make-local-variable 'font-lock-defaults) '(subtxt-font-lock-keywords t))
   (set (make-local-variable 'whitespace-style) '(face tabs lines-tail))
   (set (make-local-variable 'whitespace-line-column) 70)
-  (whitespace-mode (if subtxt-mode 1 0))
+  (whitespace-mode (if subtxt-mode 1 -1))
   )
 
   
