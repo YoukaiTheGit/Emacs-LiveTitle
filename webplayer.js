@@ -89,7 +89,13 @@ function newSlide({command, ...data})
 document.addEventListener("DOMContentLoaded", () => {
     console.log("loaded");
     var linesBox = document.getElementById("lines");
+
+    let posLeft = window.localStorage.getItem('left') || "0px";
+    let posTop = window.localStorage.getItem('top') || "0px";
+    linesBox.style.left = posLeft;
+    linesBox.style.top = posTop;
     
+    // Let the text box be dragged around the screen.
     linesBox.addEventListener("mousedown", (event) => {
         console.log("Mouse down");
         var dragStartX = event.pageX;
@@ -102,6 +108,8 @@ document.addEventListener("DOMContentLoaded", () => {
             console.log("Mouse move");
             linesBox.style.left = `${posStartLeft + (event.pageX - dragStartX)}px`;
             linesBox.style.top = `${posStartTop + (event.pageY - dragStartY)}px`;
+            window.localStorage.setItem("left", linesBox.style.left);
+            window.localStorage.setItem("top", linesBox.style.top);
             event.preventDefault();
         }
         document.addEventListener("mousemove", moveListener, true);
