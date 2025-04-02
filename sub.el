@@ -281,7 +281,7 @@ L2 L4
 (require 'websocket)
 
 (defvar sub-webplayer-server nil)
-(defvar sub-webplayer-client nil)
+(defvar sub-webplayer-clients nil)
 
 (defun sub-webplayer-start ()
   "Starts the websocket server for the web player to connect to"
@@ -302,28 +302,28 @@ L2 L4
   (when sub-webplayer-server
     (websocket-server-close sub-webplayer-server)
     (setq sub-webplayer-server nil)
-    (setq sub-webplayer-client nil)
+    (setq sub-webplayer-clients nil)
     (sub-webplayer-suspend-slides)))
 
-(defun sub-webplayer-suspend-slides ()
-  (interactive)
-  (remove-hook 'slide-change-hook 'sub-webplayer-display-current-slide))
-
 (defun sub-webplayer-resume-slides ()
+  "automatically shows the current slide when navigating"
   (interactive)
   (add-hook 'slide-change-hook 'sub-webplayer-display-current-slide))
   
+(defun sub-webplayer-suspend-slides ()
+  "Turns off auto-display during navigation"
+  (interactive)
+  (remove-hook 'slide-change-hook 'sub-webplayer-display-current-slide))
 
 (defun sub-webplayer-send (object)
-  (if sub-webplayer-client
-      (websocket-send-text sub-webplayer-client (json-encode object))))
+  (sub-webplayer-send-to-clients (json-encode object)))
    
 (defun sub-webplayer-onopen (socket)
-  (setq sub-webplayer-client socket)
+  (setq sub-webplayer-clients (cons socket sub-webplayer-clients))
   (sub-webplayer-refresh-slide))
 
 (defun sub-webplayer-onclose (socket)
-  (setq sub-webplayer-client nil))
+  (setq sub-webplayer-clients (remove socket sub-webplayer-clients)))
 
 (defun sub-webplayer-display-current-slide ()
   "Displays the slide currently at point, in the connected web player"
@@ -352,8 +352,13 @@ L2 L4
   (sub-webplayer-refresh-slide))
 
 (defun sub-webplayer-refresh-slide ()
-  (if sub-webplayer-client
-      (websocket-send-text sub-webplayer-client (sub-webplayer-format-slide sub-webplayer-current-slide))))
+  (sub-webplayer-send-to-clients (sub-webplayer-format-slide sub-webplayer-current-slide)))
+
+(defun sub-webplayer-send-to-clients (msg)
+  (seq-do
+   #'(lambda (client)
+       (websocket-send-text client msg))
+   sub-webplayer-clients))
 
 
 (defun sub-webplayer-format-slide (slide)
