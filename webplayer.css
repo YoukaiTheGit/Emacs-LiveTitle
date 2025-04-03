@@ -3,22 +3,40 @@ body {
     color: white;
     margin: 0px;
     overflow: hidden;
+
+    font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Container for the lines */
+.lines {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    
+    position: relative;
+    border: solid black 2px;
+    min-height: 7lh;
+}
+
+.lines:hover {
+    border: solid red 2px;
+}
+
+/* The lines themselves */
 
 .line {
     text-align: center;
 }
 
-.hidden {
+.line {
     display: none;
 }
-
-.lines {
-    position: relative;
-    border: solid black 2px;
+.line.active {
+    display: block;
 }
 
-.lines:hover {
-    border: solid red 2px;
+
+.hidden {
+    display: none;
 }
 

@@ -277,6 +277,7 @@ L2 L4
 ;;;
 
 (require 'websocket)
+(require 'xmlgen)
 
 (defvar sub-webplayer-server nil)
 (defvar sub-webplayer-clients nil)

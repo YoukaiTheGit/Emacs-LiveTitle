@@ -63,7 +63,12 @@ function newSlide({command, ...data})
         {
             elt = document.getElementById(`line${i}`)
             if (elt === null) break;
-            elt.textContent = (i < lines.length) ? lines[i] : "";
+            if (i < lines.length) {
+                elt.textContent = lines[i];
+                elt.classList.add("active");
+            } else {
+                elt.classList.remove("active");
+            }
         }
     }
     if (command === "hide")
