@@ -31,6 +31,9 @@ body {
     overflow: hidden;
 }
 
+.line.foreign {
+    color: pink;
+}
 
 .line.foreign + .line.english {
     margin-top: 1em;
