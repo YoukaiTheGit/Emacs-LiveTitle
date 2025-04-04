@@ -12,6 +12,7 @@ body {
     display: flex;
     flex-direction: column;
     justify-content: center;
+    overflow: hidden;
     
     position: relative;
     border: solid black 2px;
@@ -25,16 +26,15 @@ body {
 /* The lines themselves */
 
 .line {
-    text-align: center;
-}
-
-.line {
-    display: none;
-}
-.line.active {
     display: block;
+    text-align: center;
+    overflow: hidden;
 }
 
+
+.line.foreign + .line.english {
+    margin-top: 1em;
+}
 
 .hidden {
     display: none;

@@ -52,12 +52,14 @@
 ;; it is the content just after the after the '--' marker.
 ;; The remaining strings are the content lines of the slide, minus the EOL character.
 
-(defmacro slide-comment (slide)
-  `(car ,slide))
-
-(defmacro slide-lines (slide)
-  `(cdr ,slide))
-
+(cl-defstruct slide
+  ""
+  (type 'content :documentation "whether the slide contains content, or a template")
+  (comment "" :documentation "The comment of the slide" )
+  (lines '() :documentation "List of the lines as strings")
+  (template "" :documentation "The name of the HTML formatting template to use")
+  )
+    
 ;; A slide looks like this:
 ;; --[comment] or ==[comment]
 ;; line1
@@ -65,36 +67,48 @@
 ;; ...
 ;; (until the next slide)
 
-(defun slide-contents-to-list (slide)
-  (let* ((raw (split-string slide "\n" nil)) ; first elt is what trails slide separator
-         (l (cons (substring (car raw) 2) (cdr raw))))
-    (reverse (cdr (reverse l))))) ; last elt is empty string before next slide separator
+(defun slide-contents-to-slide (slide)
+  (let* ((raw (split-string slide "\n" nil))
+         (metadata (slide-parse-comment (substring (car raw) 2))))
+    (make-slide :comment (first metadata)
+                :type (if (s-starts-with-p "==" (car raw)) 'template 'content)
+                :template (or (second metadata) "")
+                ;; last elt is empty string before next slide separator
+                :lines (reverse (cdr (reverse (cdr raw)))))
+    ))
 
-(defun slide-as-list ()
-  "Converts the current slide from the buffer to a list of lines"
+(defun slide-parse-comment (comment)
+  "Parses metadata out of a slide commment, returning (COMMENT CLASS) where CLASS is anything inside {}, and COMMENT is the rest of the text"
+  (when (string-match "^\\([^\\{]*\\)\\({\\([^}]+\\)}\\)?\\(.*\\)" comment)
+    (list (concat (match-string 1 comment)
+                  (or (match-string 4 comment) ""))
+          (match-string 3 comment))))
+
+(defun slide-get-slide-at-point ()
+  "Returns the current slide contaiing point to a slide struct"
   (save-excursion
     (beginning-of-slide)
     (let ((bos (point)))
       (moveto-next-slide)
       (let ((slide (buffer-substring-no-properties bos (point))))
-	(slide-contents-to-list slide)))))
+	(slide-contents-to-slide slide)))))
 
 (defun kill-slide-as-list ()
-  "Removes the current slide from the buffer, returning its lines as a list,
+  "Removes the current slide from the buffer, returning its contents as a slide,
 and leaving point at the beginning of the following slide"
   (beginning-of-slide)
   (let ((bos (point)))
     (moveto-next-slide)
     (let ((slide (buffer-substring-no-properties bos (point))))
       (kill-region bos (point))
-      (slide-contents-to-list slide))))
+      (slide-contents-to-slide slide))))
 
-(defun list-to-slide (lines)
+(defun slide-insert (slide)
   "Inserts a new slides whose lines are the elements of LINES"
-  (insert "--")
+  (insert "--" (slide-comment slide) "\n")
   (mapc #'(lambda (line)
 	    (insert line "\n"))
-	lines))
+	(slide-lines slide)))
 
 (defun merge-slides ()
   "merges (appends) the corresponding lines of the next slide to thhe current slide, removing the next slide, and leaving point in the current slide.  E.g.,
@@ -124,13 +138,14 @@ L2 L4
   (interactive)
   (let* ((slide1 (kill-slide-as-list))
 	 (slide2 (kill-slide-as-list)))
-    (when (/= (length slide1) (length slide2))
+    (when (/= (length (slide-lines slide1)) (length (slide-lines slide2)))
       (error "Slides are not the same length"))
-    (list-to-slide 
-     (mapcar* #'(lambda (line1 line2)
-		  (format "%s%s%s" line1 delim line2))
-	      slide1
-	      slide2)))
+    (setf (slide-lines slide1)
+          (mapcar* #'(lambda (line1 line2)
+		       (format "%s%s%s" line1 delim line2))
+	           (slide-lines slide1)
+	           (slide-lines slide2)))
+    (slide-insert slide1))
   (moveto-prev-slide))
 
 (defun interleave-slides ()
@@ -139,14 +154,16 @@ L2 L4
   (moveto-prev-slide)
   (let* ((slide1 (kill-slide-as-list))
 	 (slide2 (kill-slide-as-list)))
-    (when (/= (length slide1) (length slide2))
+    (when (/= (length (slide-lines slide1)) (length (slide-lines slide2)))
       (error "Slides are not the same length"))
-    (list-to-slide
-     (apply #'nconc
-	    (mapcar* #'(lambda (line1 line2)
-			 (list line1 line2))
-		     slide1
-		     slide2)))))
+    (setf (slide-lines slide1)
+          (apply #'nconc
+	         (mapcar* #'(lambda (line1 line2)
+			      (list line1 line2))
+		          (slide-lines slide1)
+		          (slide-lines slide2))))
+    (slide-insert slide1)
+    ))
 
 (defun append-slides ()
   "Replaces the the current and previous slides with a single slide containing the lines of the first slide, followed by lines of the second slide.  Leaves point in the slide after the newly-created slide."
@@ -154,8 +171,11 @@ L2 L4
   (moveto-prev-slide)
   (let* ((slide1 (kill-slide-as-list))
 	 (slide2 (kill-slide-as-list)))
-    (list-to-slide (cons (concat (slide-comment slide1) " " (slide-comment slide2))
-                         (nconc (slide-lines slide1) (slide-lines slide2))))))
+    (setf (slide-lines slide1)
+          (append (slide-lines slide1) (slide-lines slide2)))
+    (setf (slide-comment slide1)
+          (concat (slide-comment slide1) " " (slide-comment slide2)))
+    (slide-insert slide1)))
 
 (defun export-slides-to-qstit (bufname numfields fieldsize)
   (interactive "Bexport to buffer: \nnNumber of fields in each slide: \nnNumber of lines in each field: ")
@@ -166,10 +186,11 @@ L2 L4
       (goto-char (point-min))
       (catch 'exit
 	(while t
-	  (let ((lines (slide-as-list)))
-	    (set-buffer export-buf)
-	    (insert (list-to-qstit numfields (pad-to-fieldsize (slide-lines lines) numfields fieldsize) (slide-comment lines)) "\n" )
-	    (set-buffer curbuf))
+	  (let ((slide (slide-get-slide-at-point)))
+            (when (eq 'content (slide-type slide))
+	      (set-buffer export-buf)
+	      (insert (list-to-qstit numfields (pad-to-fieldsize (slide-lines slide) numfields fieldsize) (slide-comment slide)) "\n" )
+	      (set-buffer curbuf)))
 	  (if (not (moveto-next-slide)) (throw 'exit nil)))))))
 
 (defun pad-to-fieldsize (lines numfields fieldsize)
@@ -315,19 +336,22 @@ L2 L4
   (remove-hook 'slide-change-hook 'sub-webplayer-display-current-slide))
 
 (defun sub-webplayer-send (object)
+  "broadcasts an object to all clients, formatted as json"
   (sub-webplayer-send-to-clients (json-encode object)))
    
 (defun sub-webplayer-onopen (socket)
+  "Registers a client for receiving broadcasts"
   (setq sub-webplayer-clients (cons socket sub-webplayer-clients))
   (sub-webplayer-refresh-slide))
 
 (defun sub-webplayer-onclose (socket)
+  "Removes a client from receiving broadcasts"
   (setq sub-webplayer-clients (remove socket sub-webplayer-clients)))
 
 (defun sub-webplayer-display-current-slide ()
   "Displays the slide currently at point, in the connected web player"
   (interactive)
-  (let ((slide (slide-as-list)))
+  (let ((slide (slide-get-slide-at-point)))
     (sub-webplayer-replace-slide slide)))
 
 (defun sub-webplayer-hide ()
@@ -363,7 +387,75 @@ L2 L4
 (defun sub-webplayer-format-slide (slide)
   (json-encode `((command . newslide)
                  (comment . ,(slide-comment slide))
-                 (lines . ,(vconcat (slide-lines slide))))))
+                 (content . ,(slide-html-format-slide slide)))))
 
-   
+(defun slide-html-format-slide (slide)
+  "Applies the right slide template to the slide"
+  (let ((formatter (or
+                    (cdr (assoc (slide-template slide) subtxt-webplayer-templates))
+                    "")))
+    (funcall formatter slide)))
+
+(defvar subtxt-slide-widths nil
+  "A list of (LENGTH . POS), representing the LENGTH and POSition of each slide in the deck, sorted descending by LENGTH")
+
+(defvar subtxt-webplayer-templates nil
+  "A alist of (TNAME . TFUNC) associations, TNAME is the name of a template, an TFUNC is a function taking the argument SLIDE, a slide structure, and returning string of HTML which will display the slide")
+
+(defun sub-preprocess-slides ()
+  "Scan through all the slides in the current buffer, collecting info about them"
+  (interactive)
+  (setq subtxt-slide-widths nil)
+  (setq subtxt-webplayer-templates nil)
+  
+  (let ((lengths '()))
+    (sub-foreach-slide
+     #'(lambda (pos slide)
+         
+         (when (eq 'content (slide-type slide))
+           (setq lengths (cons (cons pos (slide-width slide)) lengths)))
+         
+         (when (eq 'template (slide-type slide))
+           (setq subtxt-webplayer-templates
+                 (cons (cons (slide-template slide)
+                             (slide-make-template-fn slide))
+                       subtxt-webplayer-templates)))))
+    
+    (setq subtxt-slide-widths (sort lengths #'(lambda (a b) (< (car a) (car b)))))))
+
+(defun slide-width (slide)
+  "Returns the width of the longest line of a slide (in characters)"
+  (reduce #'max (mapcar #'length (slide-lines slide)) :initial-value 0))
+
+(defun slide-make-template-fn (template-slide)
+  (let ((template-lines
+         (mapcar #'(lambda (line)
+                     (car (read-from-string line)))
+                 (slide-lines template-slide))))
+    `(lambda (slide)
+       (let ((lines (slide-lines slide)))
+         (xmlgen
+          (remove nil (list 'div ,@template-lines)))))))
+
+
+(defun slide-default-formatter (slide)
+  "Formats the lines into HTML, in the same order that they are given"
+  (xmlgen `(div
+            ,@(mapcar #'(lambda (line)
+                          `(div :class "line" ,line))
+                      (slide-lines slide)))))
+  
+(defun sub-foreach-slide (fn)
+  "For each slide in the current buffer, call FN with the args:
+POS: the position of the slide,
+SLIDE: The slide struct"
+  (save-excursion
+    (let ((curbuf (current-buffer)))
+      (goto-char (point-min))
+      (catch 'exit
+	(while t
+	  (let ((lines (slide-get-slide-at-point)))
+            (funcall fn (point) lines))
+	  (if (not (moveto-next-slide)) (throw 'exit nil)))))))
+
 (provide 'subtxt)

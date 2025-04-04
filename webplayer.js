@@ -58,18 +58,9 @@ function newSlide({command, ...data})
 {
     if (command === "newslide")
     {
-        var {comment, lines} = data;
-        for (var i=0; ; i++)
-        {
-            elt = document.getElementById(`line${i}`)
-            if (elt === null) break;
-            if (i < lines.length) {
-                elt.textContent = lines[i];
-                elt.classList.add("active");
-            } else {
-                elt.classList.remove("active");
-            }
-        }
+        let lineContainer = document.getElementById('lines');
+        let {content} = data;
+        lineContainer.innerHTML = content;
     }
     if (command === "hide")
     {
