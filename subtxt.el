@@ -300,6 +300,18 @@ L2 L4
 (require 'websocket)
 (require 'xmlgen)
 
+(define-minor-mode subtxt-player
+  "Minor mode for playing sub-txt files"
+  :init-value nil
+  :lighter " play"
+  :keymap '(
+            ([next] . next-slide)
+            ([prior] . prev-slide)
+            ([pause] . sub-webplayer-toggle-suspend)
+            ([home] . sub-webplayer-toggle-hide)
+            )
+  )
+
 (defvar sub-webplayer-server nil)
 (defvar sub-webplayer-clients nil)
 
@@ -324,6 +336,12 @@ L2 L4
     (setq sub-webplayer-server nil)
     (setq sub-webplayer-clients nil)
     (sub-webplayer-suspend-slides)))
+
+(defun sub-webplayer-toggle-suspend ()
+  (interactive)
+  (if (member 'sub-webplayer-display-current-slide slide-change-hook)
+      (sub-webplayer-suspend-slides)
+    (sub-webplayer-resume-slides)))
 
 (defun sub-webplayer-resume-slides ()
   "automatically shows the current slide when navigating"
@@ -354,14 +372,24 @@ L2 L4
   (let ((slide (slide-get-slide-at-point)))
     (sub-webplayer-replace-slide slide)))
 
+(defvar sub-webplayer-hidden nil)
+
+(defun sub-webplayer-toggle-hide ()
+  (interactive)
+  (if sub-webplayer-hidden
+      (sub-webplayer-show)
+    (sub-webplayer-hide)))
+
 (defun sub-webplayer-hide ()
   "Turns off the webplayer's slide display"
   (interactive)
+  (setq sub-webplayer-hidden t)
   (sub-webplayer-send '((command . hide))))
 
 (defun sub-webplayer-show ()
   "Turns on the webplayer's slide display"
   (interactive)
+  (setq sub-webplayer-hidden nil)
   (sub-webplayer-send '((command . show))))
 
 (defun sub-webplayer-set-style (style)
