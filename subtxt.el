@@ -1,4 +1,5 @@
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; -*- lexical-binding: t; -*-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
 ;;;
 ;;; sub.el
 ;;;
@@ -318,6 +319,7 @@ L2 L4
   (if subtxt-player-mode
       (progn
         (sub-webplayer-start)
+        (sub-preprocess-slides)
         (sub-webplayer-resume-slides))
     (progn
       (sub-webplayer-suspend-slides))))
@@ -460,10 +462,12 @@ L2 L4
   (let ((lengths '()))
     (sub-foreach-slide
      #'(lambda (pos slide)
-         
+
+         ;; Stash away the width of the slides
          (when (eq 'content (slide-type slide))
            (setq lengths (cons (cons pos (slide-width slide)) lengths)))
-         
+
+         ;; Process any layout templates
          (when (eq 'template (slide-type slide))
            (setq subtxt-webplayer-templates
                  (cons (cons (slide-template slide)
