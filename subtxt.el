@@ -467,7 +467,7 @@ L2 L4
 
          ;; Stash away the width of the slides
          (when (eq 'content (slide-type slide))
-           (setq lengths (cons (cons pos (slide-width slide)) lengths)))
+           (setq lengths (cons (cons (slide-width slide) pos) lengths)))
 
          ;; Process any layout templates
          (when (eq 'template (slide-type slide))
@@ -476,7 +476,7 @@ L2 L4
                              (slide-make-template-fn slide))
                        subtxt-webplayer-templates)))))
     
-    (setq subtxt-slide-widths (sort lengths #'(lambda (a b) (< (car a) (car b)))))))
+    (setq subtxt-slide-widths (sort lengths #'(lambda (a b) (< (car b) (car a)))))))
 
 (defun slide-width (slide)
   "Returns the width of the longest line of a slide (in characters)"
