@@ -58,6 +58,8 @@
   (comment "" :documentation "The comment of the slide" )
   (lines '() :documentation "List of the lines as strings")
   (template "" :documentation "The name of the HTML formatting template to use")
+  begin
+  end
   )
     
 ;; A slide looks like this:
@@ -90,8 +92,11 @@
     (beginning-of-slide)
     (let ((bos (point)))
       (moveto-next-slide)
-      (let ((slide (buffer-substring-no-properties bos (point))))
-	(slide-contents-to-slide slide)))))
+      (let* ((text (buffer-substring-no-properties bos (point)))
+	     (slide (slide-contents-to-slide text)))
+        (setf (slide-begin slide) bos)
+        (setf (slide-end slide) (point))
+        slide))))
 
 (defun kill-slide-as-list ()
   "Removes the current slide from the buffer, returning its contents as a slide,
@@ -300,7 +305,7 @@ L2 L4
 (require 'websocket)
 (require 'xmlgen)
 
-(define-minor-mode subtxt-player
+(define-minor-mode subtxt-player-mode
   "Minor mode for playing sub-txt files"
   :init-value nil
   :lighter " play"
@@ -310,7 +315,12 @@ L2 L4
             ([pause] . sub-webplayer-toggle-suspend)
             ([home] . sub-webplayer-toggle-hide)
             )
-  )
+  (if subtxt-player-mode
+      (progn
+        (sub-webplayer-start)
+        (sub-webplayer-resume-slides))
+    (progn
+      (sub-webplayer-suspend-slides))))
 
 (defvar sub-webplayer-server nil)
 (defvar sub-webplayer-clients nil)
@@ -366,10 +376,21 @@ L2 L4
   "Removes a client from receiving broadcasts"
   (setq sub-webplayer-clients (remove socket sub-webplayer-clients)))
 
+(defvar sub-webplayer-current-overlay nil)
+
+(defun sub-move-webplayer-overlay (begin end)
+  (unless sub-webplayer-current-overlay
+    (setq sub-webplayer-current-overlay (make-overlay (slide-begin slide) (slide-end slide)))
+    (overlay-put sub-webplayer-current-overlay 'face 'whitespace-trailing)
+    )
+  (move-overlay sub-webplayer-current-overlay (slide-begin slide) (slide-end slide)))
+
 (defun sub-webplayer-display-current-slide ()
   "Displays the slide currently at point, in the connected web player"
   (interactive)
   (let ((slide (slide-get-slide-at-point)))
+    (recenter-top-bottom 10)
+    (sub-move-webplayer-overlay (slide-begin slide) (slide-end slide))
     (sub-webplayer-replace-slide slide)))
 
 (defvar sub-webplayer-hidden nil)
