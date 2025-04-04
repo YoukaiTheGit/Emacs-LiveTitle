@@ -316,6 +316,7 @@ L2 L4
             ([next] . next-slide)
             ([prior] . prev-slide)
             ([pause] . sub-webplayer-toggle-suspend)
+            ([home] . sub-webplayer-display-current-slide)
             ([end] . sub-webplayer-toggle-hide)
             )
   (if subtxt-player-mode
