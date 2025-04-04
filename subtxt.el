@@ -12,6 +12,7 @@
 (require 'cl-lib)
 (require 'cl-macs)
 (require 'cl-seq)
+(require 's)
 (require 'whitespace)
 
 (defun goto-slide-at-pos (p)
