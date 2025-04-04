@@ -10,6 +10,8 @@
 ;;; A subtitle file is a plain text file, with one line of text per subtitle line,
 ;;; each screen of subtitles is separated by a line containing '--'
 (require 'cl-lib)
+(require 'cl-macs)
+(require 'cl-seq)
 (require 'whitespace)
 
 (defun goto-slide-at-pos (p)
@@ -73,9 +75,9 @@
 (defun slide-contents-to-slide (slide)
   (let* ((raw (split-string slide "\n" nil))
          (metadata (slide-parse-comment (substring (car raw) 2))))
-    (make-slide :comment (first metadata)
+    (make-slide :comment (car metadata)
                 :type (if (s-starts-with-p "==" (car raw)) 'template 'content)
-                :template (or (second metadata) "")
+                :template (or (car (cdr metadata)) "")
                 ;; last elt is empty string before next slide separator
                 :lines (reverse (cdr (reverse (cdr raw)))))
     ))
@@ -314,7 +316,7 @@ L2 L4
             ([next] . next-slide)
             ([prior] . prev-slide)
             ([pause] . sub-webplayer-toggle-suspend)
-            ([home] . sub-webplayer-toggle-hide)
+            ([end] . sub-webplayer-toggle-hide)
             )
   (if subtxt-player-mode
       (progn
@@ -382,10 +384,10 @@ L2 L4
 
 (defun sub-move-webplayer-overlay (begin end)
   (unless sub-webplayer-current-overlay
-    (setq sub-webplayer-current-overlay (make-overlay (slide-begin slide) (slide-end slide)))
+    (setq sub-webplayer-current-overlay (make-overlay begin end))
     (overlay-put sub-webplayer-current-overlay 'face 'whitespace-trailing)
     )
-  (move-overlay sub-webplayer-current-overlay (slide-begin slide) (slide-end slide)))
+  (move-overlay sub-webplayer-current-overlay begin end))
 
 (defun sub-webplayer-display-current-slide ()
   "Displays the slide currently at point, in the connected web player"
@@ -478,7 +480,7 @@ L2 L4
 
 (defun slide-width (slide)
   "Returns the width of the longest line of a slide (in characters)"
-  (reduce #'max (mapcar #'length (slide-lines slide)) :initial-value 0))
+  (cl-reduce #'max (mapcar #'length (slide-lines slide)) :initial-value 0))
 
 (defun slide-make-template-fn (template-slide)
   (let ((template-lines
