@@ -338,7 +338,8 @@ L2 L4
     (setq sub-webplayer-server
           (websocket-server
            6839
-           :host 'local
+           ;;  :host 'local
+           :host "0.0.0.0"
            :on-open #'sub-webplayer-onopen
            :on-close #'sub-webplayer-onclose
            ))
@@ -353,6 +354,11 @@ L2 L4
     (setq sub-webplayer-clients nil)
     (sub-webplayer-suspend-slides)))
 
+(defun sub-webplayer-restart ()
+  (interactive)
+  (sub-webplayer-stop)
+  (sub-webplayer-start))
+  
 (defun sub-webplayer-toggle-suspend ()
   (interactive)
   (if (member 'sub-webplayer-display-current-slide slide-change-hook)
