@@ -319,6 +319,7 @@ L2 L4
             ([pause] . sub-webplayer-toggle-suspend)
             ([home] . sub-webplayer-display-current-slide)
             ([end] . sub-webplayer-toggle-hide)
+            ("\C-c\C-l" . subtxt-goto-longest-slide)
             )
   (if subtxt-player-mode
       (progn
@@ -460,6 +461,27 @@ L2 L4
 (defvar subtxt-slide-widths nil
   "A list of (LENGTH . POS), representing the LENGTH and POSition of each slide in the deck, sorted descending by LENGTH")
 
+(defvar subtxt-previous-longest-slide-index nil)
+
+(defun subtxt-goto-longest-slide (argRaw)
+  "Jumps to and displays the next longest slide.
+With numeric prefix, jumps to the Nth-longest slide.
+With prefix, displays longest."
+  (interactive "P")
+  (let ((arg (cond
+              ((null argRaw) ;; Default no prefix: go to next longest slide
+               (1+ (or subtxt-previous-longest-slide-index -1)))
+              ((listp argRaw) ;; empty prefix arg: reset to longest slide
+               0)
+              ((numberp argRaw) ;; numeric arg: go to nth longest
+               (max 0 argRaw)))))
+
+    (message "Displaying %d'th longest slide" arg)
+    (goto-char (cdr (nth arg subtxt-slide-widths)))
+    (setq subtxt-previous-longest-slide-index arg)
+    (run-hooks 'slide-change-hook)))
+
+
 (defvar subtxt-webplayer-templates nil
   "A alist of (TNAME . TFUNC) associations, TNAME is the name of a template, an TFUNC is a function taking the argument SLIDE, a slide structure, and returning string of HTML which will display the slide")
 
@@ -489,6 +511,7 @@ L2 L4
 (defun slide-width (slide)
   "Returns the width of the longest line of a slide (in characters)"
   (cl-reduce #'max (mapcar #'length (slide-lines slide)) :initial-value 0))
+
 
 (defun slide-make-template-fn (template-slide)
   (let ((template-lines
