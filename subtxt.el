@@ -528,8 +528,14 @@ With prefix, displays longest."
   "Formats the lines into HTML, in the same order that they are given"
   (xmlgen `(div
             ,@(mapcar #'(lambda (line)
-                          `(div :class "line" ,line))
+                          `(div :class "line" ,(subtxt-reformat-line line)))
                       (slide-lines slide)))))
+
+(defun subtxt-reformat-line (line)
+  "Massages the text of a line to be suitable for display in the HTML player"
+  (if (string-match "^\\s-*$" line)
+      " " ; &nbsp;
+    line))
   
 (defun sub-foreach-slide (fn)
   "For each slide in the current buffer, call FN with the args:
