@@ -5,22 +5,23 @@ body {
     overflow: hidden;
 
     font-family: Arial, Helvetica, sans-serif;
+    user-select: none;
 }
 
 /* Container for the lines */
 .lines {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
+    position: relative;
+    transform: translate(0, -50%);
     overflow: hidden;
     
-    position: relative;
     border: solid black 2px;
-    min-height: 7lh;
+    min-height: 1em; /* So there's something to grab & move even if empty */
 }
 
 .lines:hover {
     border: solid red 2px;
+    background-color: blue;
+    cursor: pointer;
 }
 
 /* The lines themselves */
