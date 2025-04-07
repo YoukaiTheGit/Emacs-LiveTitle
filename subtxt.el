@@ -418,12 +418,14 @@ L2 L4
   "Turns off the webplayer's slide display"
   (interactive)
   (setq sub-webplayer-hidden t)
+  (if sub-webplayer-current-overlay (overlay-put sub-webplayer-current-overlay 'face 'custom-themed))
   (sub-webplayer-send '((command . hide))))
 
 (defun sub-webplayer-show ()
   "Turns on the webplayer's slide display"
   (interactive)
   (setq sub-webplayer-hidden nil)
+  (if sub-webplayer-current-overlay (overlay-put sub-webplayer-current-overlay 'face 'whitespace-trailing))
   (sub-webplayer-send '((command . show))))
 
 (defun sub-webplayer-set-style (style)
