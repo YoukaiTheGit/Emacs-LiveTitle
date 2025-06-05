@@ -14,7 +14,7 @@ body {
     transform: translate(0, -50%);
     overflow: hidden;
     
-    border: solid black 2px;
+    border: solid rgb(0,0,0,0) 2px;
     min-height: 1em; /* So there's something to grab & move even if empty */
 }
 
