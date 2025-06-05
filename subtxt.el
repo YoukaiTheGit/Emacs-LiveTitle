@@ -308,6 +308,7 @@ L2 L4
 
 (require 'websocket)
 (require 'xmlgen)
+(require 'browse-url)
 
 (define-minor-mode subtxt-player-mode
   "Minor mode for playing sub-txt files"
@@ -325,9 +326,20 @@ L2 L4
       (progn
         (sub-webplayer-start)
         (sub-preprocess-slides)
+        (sub-webplayer-open-display)
         (sub-webplayer-resume-slides))
     (progn
       (sub-webplayer-suspend-slides))))
+
+(defvar sub-webplayer-path load-file-name)
+
+(defun sub-webplayer-open-display ()
+  "Opens your browser to the subtitle web displayer page."
+  (browse-url (format "%s%s"
+                      (or (file-name-directory sub-webplayer-path)
+                          (locate-library "subtxt"))
+                      "webplayer.html")))
+                      
 
 (defvar sub-webplayer-server nil)
 (defvar sub-webplayer-clients nil)
@@ -507,7 +519,8 @@ With prefix, displays longest."
                  (cons (cons (slide-template slide)
                              (slide-make-template-fn slide))
                        subtxt-webplayer-templates)))))
-    
+
+    ;; Order the slide widths widest-to-narrowest, for cycling through.
     (setq subtxt-slide-widths (sort lengths #'(lambda (a b) (< (car b) (car a)))))))
 
 (defun slide-width (slide)
