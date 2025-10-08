@@ -451,7 +451,8 @@ L2 L4
   (sub-webplayer-refresh-slide))
 
 (defun sub-webplayer-refresh-slide ()
-  (sub-webplayer-send-to-clients (sub-webplayer-format-slide sub-webplayer-current-slide)))
+  (when (eq 'content (slide-type sub-webplayer-current-slide))
+    (sub-webplayer-send-to-clients (sub-webplayer-format-slide sub-webplayer-current-slide))))
 
 (defun sub-webplayer-send-to-clients (msg)
   (seq-do
@@ -465,10 +466,15 @@ L2 L4
                  (comment . ,(slide-comment slide))
                  (content . ,(slide-html-format-slide slide)))))
 
+(defun slide-html-get-formatter (slide)
+  (if (equal "" (slide-template slide))
+      (subtxt-get-default-template slide)
+    (cdr (assoc (slide-template slide) subtxt-webplayer-templates))))
+
 (defun slide-html-format-slide (slide)
   "Applies the right slide template to the slide"
   (let ((formatter (or
-                    (cdr (assoc (slide-template slide) subtxt-webplayer-templates))
+                    (slide-html-get-formatter slide)
                     "")))
     (funcall formatter slide)))
 
@@ -495,7 +501,14 @@ With prefix, displays longest."
     (setq subtxt-previous-longest-slide-index arg)
     (run-hooks 'slide-change-hook)))
 
+(defun subtxt-get-default-template (slide)
+  (overlay-get (subtxt-get-default-template-overlay slide)
+               'subtxt-template))
 
+(defun subtxt-get-default-template-overlay (slide)
+  (seq-find #'(lambda (o) (overlay-get o 'subtxt-template))
+            (overlays-at (slide-begin slide ))))
+                     
 (defvar subtxt-webplayer-templates nil
   "A alist of (TNAME . TFUNC) associations, TNAME is the name of a template, an TFUNC is a function taking the argument SLIDE, a slide structure, and returning string of HTML which will display the slide")
 
@@ -504,6 +517,11 @@ With prefix, displays longest."
   (interactive)
   (setq subtxt-slide-widths nil)
   (setq subtxt-webplayer-templates nil)
+
+  ;; remove all default template overlays
+  (seq-do #'delete-overlay
+          (seq-filter #'(lambda (o) (overlay-get o 'subtxt-template))
+                      (overlays-in (point-min) (point-max))))
   
   (let ((lengths '()))
     (sub-foreach-slide
@@ -515,11 +533,21 @@ With prefix, displays longest."
 
          ;; Process any layout templates
          (when (eq 'template (slide-type slide))
-           (setq subtxt-webplayer-templates
-                 (cons (cons (slide-template slide)
-                             (slide-make-template-fn slide))
-                       subtxt-webplayer-templates)))))
+           (let ((fn (slide-make-template-fn slide)))
 
+             ;; If this is to be a default template, tag the rest of the file
+             ;; (with an overlay) indicating this as the default.
+             (when (equal "" (slide-template slide))
+               ;; truncate any preexisting default overlay
+               (let ((old-overlay (subtxt-get-default-template-overlay slide))
+                     (o (make-overlay pos (point-max))))
+                 (when old-overlay
+                   (setf (overlay-end old-overlay) pos))
+                 (overlay-put o 'subtxt-template fn)))
+             (setq subtxt-webplayer-templates
+                   (cons (cons (slide-template slide) fn)
+                         subtxt-webplayer-templates))))))
+    
     ;; Order the slide widths widest-to-narrowest, for cycling through.
     (setq subtxt-slide-widths (sort lengths #'(lambda (a b) (< (car b) (car a)))))))
 
