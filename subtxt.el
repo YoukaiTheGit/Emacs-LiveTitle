@@ -403,10 +403,26 @@ L2 L4
 
 (defvar sub-webplayer-current-overlay nil)
 
+(defface subtxt-shown-slide
+  '((t :foreground "yellow"
+       :background "brown"
+       :weight bold
+       ))
+  "How the current slide being displayed is shown"
+  :group 'subtxt)
+
+(defface subtxt-hidden-slide
+  '((t :foreground "gray"
+       :background "blue"
+       :weight bold
+       ))
+  "How the current slide being displayed is shown when display is disabled"
+  :group 'subtxt)
+
 (defun sub-move-webplayer-overlay (begin end)
   (unless sub-webplayer-current-overlay
     (setq sub-webplayer-current-overlay (make-overlay begin end))
-    (overlay-put sub-webplayer-current-overlay 'face 'whitespace-trailing)
+    (overlay-put sub-webplayer-current-overlay 'face 'subtxt-shown-slide)
     )
   (move-overlay sub-webplayer-current-overlay begin end))
 
@@ -430,14 +446,14 @@ L2 L4
   "Turns off the webplayer's slide display"
   (interactive)
   (setq sub-webplayer-hidden t)
-  (if sub-webplayer-current-overlay (overlay-put sub-webplayer-current-overlay 'face 'custom-themed))
+  (if sub-webplayer-current-overlay (overlay-put sub-webplayer-current-overlay 'face 'subtxt-hidden-slide))
   (sub-webplayer-send '((command . hide))))
 
 (defun sub-webplayer-show ()
   "Turns on the webplayer's slide display"
   (interactive)
   (setq sub-webplayer-hidden nil)
-  (if sub-webplayer-current-overlay (overlay-put sub-webplayer-current-overlay 'face 'whitespace-trailing))
+  (if sub-webplayer-current-overlay (overlay-put sub-webplayer-current-overlay 'face 'subtxt-shown-slide))
   (sub-webplayer-send '((command . show))))
 
 (defun sub-webplayer-set-style (style)
