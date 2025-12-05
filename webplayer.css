@@ -36,6 +36,13 @@ body {
     color: pink;
 }
 
+.line.title {
+    font-style: italic;
+    font-size: larger;
+    margin-top: 0.5em;
+    margin-bottom: 0.5em;
+}
+
 .line.foreign + .line.english {
     margin-top: 1em;
 }
