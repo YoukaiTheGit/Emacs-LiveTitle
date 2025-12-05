@@ -467,7 +467,8 @@ L2 L4
   (sub-webplayer-refresh-slide))
 
 (defun sub-webplayer-refresh-slide ()
-  (when (eq 'content (slide-type sub-webplayer-current-slide))
+  (when (and sub-webplayer-current-slide
+             (eq 'content (slide-type sub-webplayer-current-slide)))
     (sub-webplayer-send-to-clients (sub-webplayer-format-slide sub-webplayer-current-slide))))
 
 (defun sub-webplayer-send-to-clients (msg)
