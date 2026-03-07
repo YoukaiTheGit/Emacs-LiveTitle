@@ -591,8 +591,19 @@ With prefix, displays longest."
                           `(div :class "line" ,(subtxt-reformat-line line)))
                       (slide-lines slide)))))
 
+(defun subtxt-preserve-spaces (line)
+  "Replaces multiple spaces with non-breaking spaces"
+  (replace-regexp-in-string "\\s-\\s-+"
+                            #'(lambda (match)
+                                (make-string (length match) ? ))
+                            line))
+
 (defun subtxt-reformat-line (line)
   "Massages the text of a line to be suitable for display in the HTML player"
+  (subtxt-preserve-empty-line 
+   (subtxt-preserve-spaces line)))
+
+(defun subtxt-preserve-empty-line (line)
   (if (string-match "^\\s-*$" line)
       " " ; &nbsp;
     line))
