@@ -43,6 +43,10 @@ body {
     margin-bottom: 0.5em;
 }
 
+.line.description {
+    font-style: italic;
+}
+
 .line.foreign + .line.english {
     margin-top: 1em;
 }
