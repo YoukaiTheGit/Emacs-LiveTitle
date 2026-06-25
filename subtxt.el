@@ -388,10 +388,6 @@ L2 L4
   (interactive)
   (remove-hook 'slide-change-hook 'sub-webplayer-display-current-slide))
 
-(defun sub-webplayer-send (object)
-  "broadcasts an object to all clients, formatted as json"
-  (sub-webplayer-send-to-clients (json-encode object)))
-   
 (defun sub-webplayer-onopen (socket)
   "Registers a client for receiving broadcasts"
   (setq sub-webplayer-clients (cons socket sub-webplayer-clients))
@@ -469,19 +465,20 @@ L2 L4
 (defun sub-webplayer-refresh-slide ()
   (when (and sub-webplayer-current-slide
              (eq 'content (slide-type sub-webplayer-current-slide)))
-    (sub-webplayer-send-to-clients (sub-webplayer-format-slide sub-webplayer-current-slide))))
+    (sub-webplayer-send `((command . newslide)
+                          (comment . ,(slide-comment sub-webplayer-current-slide))
+                          (content . ,(slide-html-format-slide sub-webplayer-current-slide))))))
 
+(defun sub-webplayer-send (object)
+  "broadcasts an object to all clients, formatted as json"
+  (sub-webplayer-send-to-clients (json-encode object)))
+   
 (defun sub-webplayer-send-to-clients (msg)
   (seq-do
    #'(lambda (client)
        (websocket-send-text client msg))
    sub-webplayer-clients))
 
-
-(defun sub-webplayer-format-slide (slide)
-  (json-encode `((command . newslide)
-                 (comment . ,(slide-comment slide))
-                 (content . ,(slide-html-format-slide slide)))))
 
 (defun slide-html-get-formatter (slide)
   (if (equal "" (slide-template slide))
