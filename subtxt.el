@@ -618,4 +618,79 @@ SLIDE: The slide struct"
             (funcall fn (point) lines))
 	  (if (not (moveto-next-slide)) (throw 'exit nil)))))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Subtitle recording
+;;;
+
+(defvar subtxt-recording-output-buffer nil "The buffer containing the recorded slides. nil if there's no slide being displayed.")
+(defvar subtxt-recording-current-slide nil "The slide being currently displayed")
+(defvar subtxt-recording-start-time nil "The 'zero' time that the recording was started.")
+(defvar subtxt-recording-slide-number 1)
+
+(defun subtxt-start-recording ()
+  "Starts recording the timing of slides to an srt file"
+  (interactive)
+  (unless subtxt-recording-output-buffer
+    (setq subtxt-recording-output-buffer (get-buffer-create "subtxt-recording"))
+    (with-current-buffer subtxt-recording-output-buffer
+      (set-buffer-file-coding-system 'utf-8))
+    (setq subtxt-recording-start-time (float-time))
+    (add-hook 'slide-change-hook 'subtxt-recording-slide-changed))
+  (subtxt-recording-slide-changed))
+
+(defun subtxt-stop-recording ()
+  "Stops recording the timing of slides to an srt file"
+  (interactive)
+  (when subtxt-recording-output-buffer
+    (subtxt-recording-end-slide)
+    (remove-hook 'slide-change-hook 'subtxt-recording-slide-changed)
+    (switch-to-buffer subtxt-recording-output-buffer)
+    (setq subtxt-recording-output-buffer nil)))
+
+
+(defun subtxt-recording-slide-changed ()
+  "Hook function to write the current slide to subtitle output"
+  (let* ((slide (slide-get-slide-at-point))
+         (lines (slide-lines slide)))
+    (when (eq 'content (slide-type slide))
+      ;; If we're currently in a title, end it.
+      (subtxt-recording-end-slide)
+      ;; If the current slide is not empty, then start it.
+      (if lines
+          (subtxt-recording-start-slide lines)))))
+
+(defun subtxt-recording-start-slide (lines)
+  "Starts the current slide by recording the current start time."
+  (setq subtxt-recording-current-slide lines)
+  (with-current-buffer subtxt-recording-output-buffer
+    (insert (format "%d\n" subtxt-recording-slide-number))
+    (setq subtxt-recording-slide-number (1+ subtxt-recording-slide-number))
+    (insert (subtxt-format-srt-timestamp (subtxt-relative-time (float-time))))))
+
+(defun subtxt-recording-end-slide ()
+  "Closes the current slide by recording the current end time."
+  (when subtxt-recording-current-slide
+    (with-current-buffer subtxt-recording-output-buffer
+      (insert (format " --> %s\n" (subtxt-format-srt-timestamp (subtxt-relative-time (float-time)))))
+      (insert (subtxt-format-srt-lines subtxt-recording-current-slide))
+      (insert "\n\n"))
+    (setq subtxt-recording-current-slide nil)))
+
+
+(defun subtxt-relative-time (timestamp)
+  "Shifts the absolute timestamp to be relative to the recording start"
+  (- timestamp subtxt-recording-start-time))
+
+(defun subtxt-format-srt-timestamp (timestamp)
+  "Formats a timestamp in srt format"
+  (let* ((h (floor timestamp 3600))
+         (m (floor (- timestamp (* h 3600)) 60))
+         (s (floor (- timestamp (* h 3600) (* m 60))))
+         (ms (floor (* 1000 (- timestamp (floor timestamp))))))
+    (format "%02d:%02d:%02d,%03d" h m s ms)))
+
+(defun subtxt-format-srt-lines (lines)
+  (mapconcat #'identity lines "\n"))
+
 (provide 'subtxt)
