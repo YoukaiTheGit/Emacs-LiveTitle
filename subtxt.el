@@ -628,12 +628,21 @@ SLIDE: The slide struct"
 (defvar subtxt-recording-start-time nil "The 'zero' time that the recording was started.")
 (defvar subtxt-recording-slide-number 1)
 
-(defun subtxt-start-recording ()
+(defun subtxt-start-recording (delay)
   "Starts recording the timing of slides to an srt file"
-  (interactive)
+  (interactive "P")
+  (when delay
+    (while (> delay 0)
+      (message "Starting in %d" delay)
+      (sleep-for 1)
+      (setq delay (1- delay))))
   (unless subtxt-recording-output-buffer
     (setq subtxt-recording-output-buffer (get-buffer-create "subtxt-recording"))
     (with-current-buffer subtxt-recording-output-buffer
+      ;; if this is a brand new buffer, restart the numbering.
+      ;; otherwise, assume we're continuing a previous set of slides.
+      (if (<= 1 (point-max))
+          (setq subtxt-recording-slide-number 1))
       (set-buffer-file-coding-system 'utf-8))
     (setq subtxt-recording-start-time (float-time))
     (add-hook 'slide-change-hook 'subtxt-recording-slide-changed))
