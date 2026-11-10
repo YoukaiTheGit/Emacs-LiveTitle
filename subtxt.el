@@ -266,9 +266,14 @@ L2 L4
 ;;; Minor mode
 ;;;
 
+(defface subtxt-slide-separator-face
+  '((t :background "#483d8b" :extend t))
+  "Face for the line separating slides")
+
 (defconst subtxt-font-lock-keywords
   '(
-    ("^\\(--\\)\\([[:print:]]*\\)$" (1 'custom-comment) (2 'font-lock-comment-face))
+    ("^--.*\n" . 'subtxt-slide-separator-face)
+    ("^\\(--\\)\\([[:print:]]*\\)$" (2 'font-lock-comment-face prepend))
     ("^\\(\\([[:upper:]\s-&,]\\)+\\):" 1 'font-lock-variable-name-face)
     ))
          
