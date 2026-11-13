@@ -5,11 +5,13 @@ function getQueryParameter(param, defaultValue) {
 }
 
 // Get the host and port from the query parameters
+const secure = getQueryParameter('secure', 'false').match(/true|yes|1/i);
 const host = getQueryParameter('host', 'localhost');
 const port = getQueryParameter('port', '6839');
+const token = getQueryParameter('token', null);
 
 // Create the WebSocket URL
-const websocketUrl = `ws://${host}:${port}`;
+const websocketUrl = getQueryParameter('ws', `ws${secure?'s':''}://${host}:${port}`)
 
 let socket;
 let retryInterval = 3000; // Retry interval in milliseconds

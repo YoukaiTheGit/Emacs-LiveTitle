@@ -393,6 +393,9 @@ L2 L4
   (interactive)
   (remove-hook 'slide-change-hook 'sub-webplayer-display-current-slide))
 
+(defvar sub-webplayer-token nil
+  "Secret access token that websocket clients must present in the 'token' query param")
+
 (defun sub-webplayer-onopen (socket)
   "Registers a client for receiving broadcasts"
   (setq sub-webplayer-clients (cons socket sub-webplayer-clients))
@@ -431,7 +434,7 @@ L2 L4
   "Displays the slide currently at point, in the connected web player"
   (interactive)
   (let ((slide (slide-get-slide-at-point)))
-    (recenter-top-bottom 10)
+    (ignore-errors (recenter-top-bottom 10))
     (sub-move-webplayer-overlay (slide-begin slide) (slide-end slide))
     (sub-webplayer-replace-slide slide)))
 
